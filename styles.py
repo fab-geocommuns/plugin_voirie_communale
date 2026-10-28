@@ -249,13 +249,16 @@ class StylesMixin:
         il faut les doubler : ``\\\\b`` dans la chaîne Python → ``\\b`` dans l'expression
         QGIS → ``\\b`` reçu par le moteur regex.
 
+        Les apostrophes sont doublées (``'`` → ``''``), sinon elles fermeraient le
+        littéral et rendraient l'expression invalide (ex. « chemin d'exploitation »).
+
         Args:
             regex: Expression régulière Python (ex. ``r'\\bC\\.?R\\.?\\b'``).
 
         Returns:
-            str: Regex avec backslashes doublés, prête à être insérée dans ``'...'``.
+            str: Regex échappée, prête à être insérée dans ``'...'``.
         """
-        return regex.replace('\\', '\\\\')
+        return regex.replace('\\', '\\\\').replace("'", "''")
 
     # ------------------------------------------------------------------
     # Méthodes fetch-to-vsimem (background-safe, sans objets QGIS)

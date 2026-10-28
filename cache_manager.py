@@ -199,10 +199,11 @@ class CacheManagerMixin:
         return True
 
     def _reload_layer_from_cache_preserving_style(self, code_insee, layer_key, layer, display_name):
-        """Bascule la source de données de `layer` (initialement en provider
-        'memory') vers sa version fraîchement écrite dans le GeoPackage de
-        cache (provider 'ogr'), afin qu'elle ne soit plus signalée par QGIS
-        comme « couche temporaire ».
+        """Bascule la source de données de `layer` (provider 'memory', ou
+        GeoJSON en /vsimem/) vers sa version fraîchement écrite dans le
+        GeoPackage de cache (provider 'ogr'), afin qu'elle ne soit plus
+        signalée par QGIS comme « couche temporaire » et qu'elle survive à
+        l'enregistrement du projet.
 
         Utilise `QgsVectorLayer.setDataSource()` plutôt que de recréer une
         nouvelle couche : il s'agit du même objet QgsVectorLayer (même id,

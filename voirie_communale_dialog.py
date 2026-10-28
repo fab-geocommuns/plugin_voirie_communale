@@ -8,6 +8,8 @@ Licence : GNU GPL v2+
 import os
 import re
 import json
+import shutil
+from qgis.core import QgsApplication
 from qgis.PyQt.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QMessageBox, QCheckBox, QFrame,
@@ -148,9 +150,20 @@ class SettingsDialog(QDialog):
     }
 
     @staticmethod
+    def _user_dir():
+        """Dossier des fichiers utilisateur dans le profil QGIS actif (créé si besoin).
+
+        Hors du dossier du plugin : celui-ci est entièrement remplacé à chaque
+        mise à jour par le gestionnaire d'extensions, ce qui effaçait les réglages.
+        """
+        path = os.path.join(QgsApplication.qgisSettingsDirPath(), "voirie_communale")
+        os.makedirs(path, exist_ok=True)
+        return path
+
+    @staticmethod
     def _settings_path():
-        """Chemin du fichier settings.json dans le dossier du plugin."""
-        return os.path.join(os.path.dirname(__file__), "settings.json")
+        """Chemin du fichier settings.json dans le profil QGIS."""
+        return os.path.join(SettingsDialog._user_dir(), "settings.json")
 
     @staticmethod
     def _load():
@@ -158,6 +171,13 @@ class SettingsDialog(QDialog):
         migre les anciennes valeurs par défaut connues vers la valeur courante,
         et sauvegarde si des clés ont été ajoutées ou migrées."""
         path = SettingsDialog._settings_path()
+        # Migration : settings.json était auparavant stocké dans le dossier du plugin
+        legacy_path = os.path.join(os.path.dirname(__file__), "settings.json")
+        if not os.path.isfile(path) and os.path.isfile(legacy_path):
+            try:
+                shutil.copyfile(legacy_path, path)
+            except OSError:
+                pass
         data = {}
         if os.path.isfile(path):
             try:
@@ -213,26 +233,36 @@ class SettingsDialog(QDialog):
     # Lecture / écriture de layer_order.json
     # ------------------------------------------------------------------
     @classmethod
+    def _user_layer_order_path(cls):
+        """Ordre personnalisé, dans le profil QGIS (le layer_order.json du plugin
+        reste l'ordre par défaut, réécrit à chaque mise à jour)."""
+        return os.path.join(cls._user_dir(), "layer_order.json")
+
+    @classmethod
     def _read_layer_order(cls):
-        """Lit layer_order.json et retourne (commune_group, root)."""
-        try:
-            with open(cls._LAYER_ORDER_JSON, encoding='utf-8') as f:
-                data = json.load(f)
-            return data.get('commune_group', []), data.get('root', [])
-        except (OSError, json.JSONDecodeError):
-            return [], []
+        """Retourne (commune_group, root) : l'ordre personnalisé s'il existe,
+        complété des entrées par défaut absentes (couches ajoutées depuis),
+        sinon l'ordre par défaut du plugin. ([], []) si rien n'est lisible."""
+        def _read(path):
+            try:
+                with open(path, encoding='utf-8') as f:
+                    data = json.load(f)
+                return data.get('commune_group', []), data.get('root', [])
+            except (OSError, json.JSONDecodeError):
+                return [], []
+
+        default_cg, default_root = _read(cls._LAYER_ORDER_JSON)
+        user_cg, user_root = _read(cls._user_layer_order_path())
+        if not user_cg or not user_root:
+            return default_cg, default_root
+        return (user_cg + [n for n in default_cg if n not in user_cg],
+                user_root + [n for n in default_root if n not in user_root])
 
     @classmethod
     def _write_layer_order(cls, commune_group, root):
-        """Sauvegarde commune_group et root dans layer_order.json."""
-        try:
-            with open(cls._LAYER_ORDER_JSON, encoding='utf-8') as f:
-                data = json.load(f)
-        except (OSError, json.JSONDecodeError):
-            data = {}
-        data['commune_group'] = commune_group
-        data['root'] = root
-        with open(cls._LAYER_ORDER_JSON, 'w', encoding='utf-8') as f:
+        """Sauvegarde l'ordre personnalisé dans le profil QGIS."""
+        data = {'commune_group': commune_group, 'root': root}
+        with open(cls._user_layer_order_path(), 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
     def __init__(self, parent=None):

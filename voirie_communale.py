@@ -670,7 +670,16 @@ class VoirieCommunale(LayerOrderMixin, WfsLoaderMixin, StylesMixin, CacheManager
                 )
                 results.append((spec['result_key'], ok))
                 if layer:
-                    self._save_layer_to_cache(code_insee, spec['cache_key'], layer)
+                    # Basculer la couche vers le GeoPackage de cache : une source
+                    # /vsimem/ ne survit pas à la fermeture de QGIS (projet
+                    # enregistré cassé à la réouverture, sans avertissement).
+                    if self._save_layer_to_cache(code_insee, spec['cache_key'], layer):
+                        layer = self._reload_layer_from_cache_preserving_style(
+                            code_insee, spec['cache_key'], layer, spec['layer_name']
+                        )
+                        if not layer.source().startswith('/vsimem/'):
+                            from osgeo import gdal
+                            gdal.Unlink(task.vsimem_path)
                     if spec['needs_clip'] and clip_to_commune and commune_layer:
                         layer = self._clip_layer_to_commune(layer, commune_layer, clip_buffer_m)
                     loaded_layers.append(layer)

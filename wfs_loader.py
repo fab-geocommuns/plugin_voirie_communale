@@ -11,6 +11,7 @@ donnees (BAN, BD TOPO, OSM, MagOSM, MAJIC, cadastre, WMS historiques, etc.).
 """
 import json
 import time
+import uuid
 import urllib.parse
 import urllib.request
 import urllib.error
@@ -20,6 +21,12 @@ from qgis.core import (QgsProject, QgsVectorLayer, QgsRasterLayer, QgsMessageLog
                        Qgis, QgsTask,
                        QgsFeature, QgsGeometry, QgsPointXY)
 
+
+def _unique_vsimem_path(stem):
+    """Chemin /vsimem/ unique par téléchargement : deux chargements successifs
+    (autre commune, rechargement) ne doivent jamais réécrire le fichier encore
+    ouvert par une couche existante."""
+    return f"/vsimem/{stem}_{uuid.uuid4().hex}.json"
 
 
 class WfsLoadTask(QgsTask):
@@ -446,7 +453,7 @@ class WfsLoaderMixin:
         assembled = {'type': 'FeatureCollection', 'features': all_features}
         if crs_ref:
             assembled['crs'] = crs_ref
-        vsimem_path = f"/vsimem/{typename.replace(':', '_').replace('.', '_')}_par.json"
+        vsimem_path = _unique_vsimem_path(f"{typename.replace(':', '_').replace('.', '_')}_par")
         gdal.FileFromMemBuffer(vsimem_path, json.dumps(assembled).encode('utf-8'))
         return True, vsimem_path, None
 
@@ -470,7 +477,7 @@ class WfsLoaderMixin:
                 payload = resp.read()
         except (urllib.error.URLError, OSError) as exc:
             return False, None, str(exc)
-        vsimem_path = f"/vsimem/{typename.replace(':', '_').replace('.', '_')}_bbox_par.json"
+        vsimem_path = _unique_vsimem_path(f"{typename.replace(':', '_').replace('.', '_')}_bbox_par")
         gdal.FileFromMemBuffer(vsimem_path, payload)
         return True, vsimem_path, None
 
@@ -520,7 +527,7 @@ class WfsLoaderMixin:
         assembled = {'type': 'FeatureCollection', 'features': all_features}
         if crs_ref:
             assembled['crs'] = crs_ref
-        vsimem_path = "/vsimem/magosm_highways_line_par.json"
+        vsimem_path = _unique_vsimem_path("magosm_highways_line_par")
         gdal.FileFromMemBuffer(vsimem_path, json.dumps(assembled).encode('utf-8'))
         return True, vsimem_path, None
 
@@ -630,7 +637,7 @@ class WfsLoaderMixin:
             "crs": {"type": "name", "properties": {"name": "EPSG:4326"}},
             "features": features
         }
-        vsimem_path = "/vsimem/osm_roads_par.json"
+        vsimem_path = _unique_vsimem_path("osm_roads_par")
         gdal.FileFromMemBuffer(vsimem_path, json.dumps(geojson).encode('utf-8'))
         return True, vsimem_path, None
 

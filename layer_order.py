@@ -9,11 +9,15 @@ regroupement des couches d'une commune dans un groupe dedie, le reordonnancement
 selon l'ordre canonique, les utilitaires de recherche de couches/groupes par
 nom, et le clip geometrique par emprise communale.
 """
-import os
-import json
+import re
 from qgis.core import (QgsProject, QgsMessageLog, Qgis, QgsLayerTreeGroup, QgsLayerTreeLayer,
                        QgsVectorLayer, QgsCoordinateTransform, QgsCoordinateReferenceSystem,
                        QgsGeometry, QgsWkbTypes)
+
+from .voirie_communale_dialog import SettingsDialog
+
+# Groupe commune : "{code_insee}" ou "{code_insee} - {nom}", Corse (2A/2B) comprise
+_COMMUNE_GROUP_RE = re.compile(r'^(?:\d{2}|2[AB])\d{3}')
 
 
 class LayerOrderMixin:
@@ -153,26 +157,18 @@ class LayerOrderMixin:
 
 
     def _load_canonical_order(self):
-        """Lit layer_order.json (répertoire du plugin) et retourne le dict d'ordre canonique.
+        """Retourne l'ordre canonique (commune_group, root) : ordre personnalisé du
+        profil QGIS, sinon layer_order.json du plugin (voir SettingsDialog._read_layer_order).
 
-        Structure attendue :
-          {"commune_group": [...], "root": [...]}
-
-        En cas d'erreur (fichier absent, JSON invalide), retourne les valeurs par défaut
-        hardcodées et logue un avertissement.
+        Si aucun n'est lisible, retourne les valeurs par défaut hardcodées et logue
+        un avertissement.
         """
-        json_path = os.path.join(os.path.dirname(__file__), 'layer_order.json')
-        try:
-            with open(json_path, encoding='utf-8') as f:
-                data = json.load(f)
-            commune_group = data.get('commune_group', [])
-            root = data.get('root', [])
-            if not commune_group or not root:
-                raise ValueError("Clés 'commune_group' ou 'root' manquantes ou vides")
+        commune_group, root = SettingsDialog._read_layer_order()
+        if commune_group and root:
             return commune_group, root
-        except (OSError, json.JSONDecodeError, ValueError) as exc:
+        else:
             QgsMessageLog.logMessage(
-                f"layer_order.json illisible ({exc}) — ordre canonique par défaut utilisé",
+                "layer_order.json illisible ou incomplet — ordre canonique par défaut utilisé",
                 "VoirieCommunale", Qgis.Warning
             )
             # Valeurs de repli (identiques au contenu initial du JSON)
@@ -216,9 +212,6 @@ class LayerOrderMixin:
         Algorithme : insert-at-0 en ordre inversé — déplace chaque item connu en tête
         de liste, un par un. Les items inconnus ne sont pas touchés (restent en place).
         """
-        import re as _re
-        _INSEE_RE = _re.compile(r'^\d{5}')
-
         root = QgsProject.instance().layerTreeRoot()
 
         # Ordre chargé depuis layer_order.json (root = items à la racine)
@@ -226,11 +219,11 @@ class LayerOrderMixin:
 
         for name in reversed(root_order_templates):
             if name == "__COMMUNE_GROUP__":
-                # Traiter TOUS les groupes communes (préfixe 5 chiffres INSEE)
+                # Traiter TOUS les groupes communes (préfixe code INSEE)
                 # dans leur ordre actuel dans l'arbre (du haut vers le bas)
                 commune_groups = [
                     child for child in root.children()
-                    if isinstance(child, QgsLayerTreeGroup) and _INSEE_RE.match(child.name())
+                    if isinstance(child, QgsLayerTreeGroup) and _COMMUNE_GROUP_RE.match(child.name())
                 ]
                 if not commune_groups:
                     continue
