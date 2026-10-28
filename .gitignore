@@ -68,6 +68,9 @@ docs/_build/
 # PyCharm
 .idea/
 
+# Claude Code (réglages personnels)
+.claude/settings.local.json
+
 # VS Code
 .vscode/
 *.code-workspace

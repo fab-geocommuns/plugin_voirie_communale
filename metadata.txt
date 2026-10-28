@@ -3,7 +3,7 @@ name=Voirie Communale
 qgisMinimumVersion=3.0
 tags=voirie,commune,chemin rural,voie communale,cadastre,BAN,OSM,IGN
 description=Plugin d'aide pour le recensement de la voirie communale (voies communales et chemins ruraux)
-version=0.20.3
+version=0.20.4
 author=Yann Schwarz
 email=yann.schwarz@gmail.com
 
@@ -17,7 +17,17 @@ repository=https://github.com/fab-geocommuns/plugin_voirie_communale
 
 # Recommended items:
 hasProcessingProvider=no
-changelog=    Version 0.20.3 (2026-09-09)
+changelog=    Version 0.20.4 (2026-10-28)
+    - Couches perdues à la réouverture d'un projet enregistré : après un téléchargement réseau, les couches Adresses BAN, Voirie communale/départementale DGCL, OSM Routes, MagOSM et BD TOPO restaient branchées sur un fichier temporaire en mémoire (/vsimem/). Un projet enregistré les perdait à la réouverture, sans aucun avertissement de QGIS. Elles sont désormais basculées vers le cache GeoPackage local juste après le téléchargement (comme MAJIC, Filaires BAL et EDIGEO), en conservant leur style, et la mémoire temporaire est libérée. Chaque téléchargement utilise aussi un fichier temporaire distinct : charger une deuxième commune ne peut plus écraser les données de la première.
+    - Paramètres effacés à chaque mise à jour du plugin : settings.json (regex, dernier code INSEE, cases cochées) et l'ordre des couches personnalisé étaient enregistrés dans le dossier du plugin, entièrement remplacé par le gestionnaire d'extensions à chaque mise à jour. Ils sont désormais enregistrés dans le profil QGIS (dossier voirie_communale). Un settings.json existant est repris automatiquement. Le layer_order.json du plugin reste l'ordre par défaut ; les couches ajoutées dans une version future sont rajoutées à la fin d'un ordre personnalisé.
+    - Corse : groupe commune non réordonné : le réordonnancement automatique ne reconnaissait que les codes INSEE à 5 chiffres ; les groupes « 2A... » / « 2B... » restaient à leur place.
+    - Apostrophe dans une regex de catégorisation : une regex contenant ' (ex. « chemin d'exploitation ») produisait une expression QGIS invalide et la catégorisation Chemin rural / Voie communale ne s'appliquait plus. Les apostrophes sont désormais échappées.
+    - Dépôt GitHub : le projet est désormais hébergé sur https://github.com/fab-geocommuns/plugin_voirie_communale (metadata.txt, boîte « À propos », README des releases).
+    - Fiabilisation de la publication (build.bat) :
+    - Les notes de version s'écrivent sous # [Non publié] en tête du CHANGELOG ; bump_version.py y inscrit lui-même le numéro et la date, et refuse de publier sans notes (fin des numéros devinés puis corrigés après coup).
+    - package.py détecte automatiquement les modules du plugin au lieu d'une liste en dur (un module oublié rendait le ZIP inutilisable, cf. v0.17.0) et contrôle avant publication la syntaxe, les imports internes et les noms non définis (cf. régressions v0.15.18 / v0.15.19).
+    - Le build s'arrête si des fichiers non suivis traînent dans le dossier, ne commite que les fichiers suivis, n'écrase plus jamais un tag existant et vérifie chaque push.
+    Version 0.20.3 (2026-09-09)
     - Filaires de voie BAL sans étiquette ni style : contrairement aux autres couches de voies (BAN, BD TOPO tronçons, MagOSM, Voies EDIGEO), la couche « Filaires de voie BAL » n'avait jamais reçu de fonction de style — elle s'affichait avec le rendu par défaut de QGIS, sans étiquette de nom ni catégorisation Chemin rural / Voie communale. Une nouvelle méthode apply_filaires_bal_style (mêmes regex configurables que les autres couches) lui applique désormais le même traitement, avec étiquetage sur le champ « nom ».
     Version 0.20.2 (2026-09-09)
     - Chargement des parcelles MAJIC : abandon complet à la première erreur réseau. En observant la commune 05003, le serveur WFS IGN (data.geopf.fr) s'est révélé ponctuellement instable sur certains lots de la requête filtrée par idu (introduite en v0.20.0), avec des dépassements de délai (timeout) sur 1 ou 2 lots parmi une quinzaine. Le code interrompait alors tout le chargement dès la première erreur, même après avoir déjà récupéré la quasi-totalité des données — c'est ce qui donnait l'impression que « ça ne marche toujours pas » malgré le correctif précédent. Désormais :
@@ -47,8 +57,6 @@ changelog=    Version 0.20.3 (2026-09-09)
     - Regex « Voie communale » : élargie pour reconnaître aussi les variantes « Chemin Communal(e/aux) » (ex. « Chemin Communal nº 5 »), en plus de « Voie(s) Communale(s) » et « V.C. ». Migration automatique de l'ancienne valeur par défaut vers la nouvelle au chargement des réglages (les regex personnalisées par l'utilisateur ne sont pas modifiées). Le libellé de la section des réglages passe de « Catégorisation des adresses BAN » à « Catégorisation Chemin rural / Voie communale », reflétant son usage désormais partagé par les couches BAN, BD TOPO tronçons, MagOSM et Voies EDIGEO (cadastre).
     Version 0.18.2 (2026-08-05)
     - Voies EDIGEO (cadastre) : style désormais catégorisé par regex (Chemin rural / Voie communale / Autre) sur le nom complet reconstitué, avec les mêmes expressions régulières (configurables via les mêmes clés de réglages ban_regex_chemin/ban_regex_voie) que celles déjà utilisées pour les couches BAN, BD TOPO tronçons et MagOSM. Auparavant la couche utilisait un style simple à trait unique.
-    Version 0.18.1 (2026-08-02)
-    - Voies EDIGEO (cadastre) : la couche VOIEP_id (« Dénomination de voie EDIGEO ») ajoutée en v0.18.0 a été retirée. Après vérification exhaustive sur l'ensemble des sections cadastrales d'une commune test, cette couche s'est révélée mélanger des toponymes divers (lieux-dits, bâtiments remarquables comme « Mairie »/« Poste », points cotés d'altitude, repères géodésiques) sans aucun champ permettant de distinguer un nom de voie des autres entrées. Seule la couche ZONCOMMUNI_id (voies, lignes) est donc conservée et chargée par la case à cocher « Voies (cadastre EDIGEO) ».
 homepage=https://github.com/votre-username/voirie_communale
 category=Plugins
 icon=icon.png

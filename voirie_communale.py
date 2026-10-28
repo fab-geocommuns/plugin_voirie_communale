@@ -14,8 +14,8 @@ import re
 import os
 import os.path
 
-# Initialize Qt resources from file resources.py
-from .resources import *
+# Initialize Qt resources from file resources.py (l'import enregistre l'icône :/plugins/...)
+from . import resources  # noqa: F401
 # Import the code for the dialog
 from .voirie_communale_dialog import VoirieCommunaleDialog, PhotoAeriennesDialog, LauncherDialog, SettingsDialog
 # Import version information

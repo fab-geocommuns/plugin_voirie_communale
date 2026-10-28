@@ -1,3 +1,17 @@
+# [0.20.4] - 2026-10-28
+### Corrigé
+- **Couches perdues à la réouverture d'un projet enregistré** : après un téléchargement réseau, les couches Adresses BAN, Voirie communale/départementale DGCL, OSM Routes, MagOSM et BD TOPO restaient branchées sur un fichier temporaire en mémoire (`/vsimem/`). Un projet enregistré les perdait à la réouverture, sans aucun avertissement de QGIS. Elles sont désormais basculées vers le cache GeoPackage local juste après le téléchargement (comme MAJIC, Filaires BAL et EDIGEO), en conservant leur style, et la mémoire temporaire est libérée. Chaque téléchargement utilise aussi un fichier temporaire distinct : charger une deuxième commune ne peut plus écraser les données de la première.
+- **Paramètres effacés à chaque mise à jour du plugin** : `settings.json` (regex, dernier code INSEE, cases cochées) et l'ordre des couches personnalisé étaient enregistrés dans le dossier du plugin, entièrement remplacé par le gestionnaire d'extensions à chaque mise à jour. Ils sont désormais enregistrés dans le profil QGIS (dossier `voirie_communale`). Un `settings.json` existant est repris automatiquement. Le `layer_order.json` du plugin reste l'ordre par défaut ; les couches ajoutées dans une version future sont rajoutées à la fin d'un ordre personnalisé.
+- **Corse : groupe commune non réordonné** : le réordonnancement automatique ne reconnaissait que les codes INSEE à 5 chiffres ; les groupes « 2A… » / « 2B… » restaient à leur place.
+- **Apostrophe dans une regex de catégorisation** : une regex contenant `'` (ex. « chemin d'exploitation ») produisait une expression QGIS invalide et la catégorisation Chemin rural / Voie communale ne s'appliquait plus. Les apostrophes sont désormais échappées.
+
+### Modifié
+- **Dépôt GitHub** : le projet est désormais hébergé sur https://github.com/fab-geocommuns/plugin_voirie_communale (metadata.txt, boîte « À propos », README des releases).
+- **Fiabilisation de la publication (`build.bat`)** :
+  - Les notes de version s'écrivent sous `# [Non publié]` en tête du CHANGELOG ; `bump_version.py` y inscrit lui-même le numéro et la date, et refuse de publier sans notes (fin des numéros devinés puis corrigés après coup).
+  - `package.py` détecte automatiquement les modules du plugin au lieu d'une liste en dur (un module oublié rendait le ZIP inutilisable, cf. v0.17.0) et contrôle avant publication la syntaxe, les imports internes et les noms non définis (cf. régressions v0.15.18 / v0.15.19).
+  - Le build s'arrête si des fichiers non suivis traînent dans le dossier, ne commite que les fichiers suivis, n'écrase plus jamais un tag existant et vérifie chaque push.
+
 # [0.20.3] - 2026-09-09
 ### Corrigé
 - **Filaires de voie BAL sans étiquette ni style** : contrairement aux autres couches de voies (BAN, BD TOPO tronçons, MagOSM, Voies EDIGEO), la couche « Filaires de voie BAL » n'avait jamais reçu de fonction de style — elle s'affichait avec le rendu par défaut de QGIS, sans étiquette de nom ni catégorisation Chemin rural / Voie communale. Une nouvelle méthode `apply_filaires_bal_style` (mêmes regex configurables que les autres couches) lui applique désormais le même traitement, avec étiquetage sur le champ « nom ».

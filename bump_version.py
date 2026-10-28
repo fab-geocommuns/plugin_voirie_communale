@@ -8,13 +8,21 @@ Usage:
     (défaut : patch)
 
 Exemple : 0.10.3 --patch--> 0.10.4 --minor--> 0.11.0 --major--> 1.0.0
+
+Les notes de la future version s'écrivent en tête de CHANGELOG.md sous le titre
+`# [Non publié]` : ce script le renomme en `# [X.Y.Z] - AAAA-MM-JJ` avec la
+version calculée, pour ne jamais avoir à deviner le numéro à l'avance. Sans
+section « Non publié », il refuse d'incrémenter (release sans notes).
 """
 
 import sys
 import re
+from datetime import date
 from pathlib import Path
 
 BASE = Path(__file__).parent
+
+UNRELEASED_RE = re.compile(r'^# \[(?:Non publié|Unreleased)\][^\n]*$', re.MULTILINE | re.IGNORECASE)
 
 
 def read_current_version():
@@ -40,6 +48,23 @@ def bump(part):
     new = f"{major}.{minor}.{patch}"
     new_info = f"({major}, {minor}, {patch})"
 
+    # --- CHANGELOG.md : la première section doit être « Non publié » ---
+    # Vérifié avant toute écriture : en cas d'erreur, aucun fichier n'est modifié.
+    clog_path = BASE / 'CHANGELOG.md'
+    clog_content = clog_path.read_text(encoding='utf-8')
+    first_title = next((l for l in clog_content.splitlines() if l.startswith('# [')), '')
+    if not UNRELEASED_RE.match(first_title):
+        print(
+            "ERREUR : CHANGELOG.md ne commence pas par une section « # [Non publié] ».\n"
+            f"  Première section trouvée : {first_title or '(aucune)'}\n"
+            "  Ajoutez en tête les notes de cette version sous « # [Non publié] » "
+            "(le numéro et la date sont renseignés automatiquement).",
+            file=sys.stderr
+        )
+        sys.exit(1)
+    clog_content = UNRELEASED_RE.sub(f"# [{new}] - {date.today().isoformat()}", clog_content, count=1)
+    clog_path.write_text(clog_content, encoding='utf-8')
+
     # --- version.py ---
     vpath = BASE / 'version.py'
     content = vpath.read_text(encoding='utf-8')
@@ -61,46 +86,43 @@ def bump(part):
     meta = re.sub(r'^version=\d+\.\d+\.\d+', f'version={new}', meta, flags=re.MULTILINE)
 
     # Synchroniser le champ changelog= depuis CHANGELOG.md (10 dernières versions)
-    clog_path = BASE / 'CHANGELOG.md'
-    if clog_path.exists():
-        clog_content = clog_path.read_text(encoding='utf-8')
-        sections = re.split(r'(?=^# \[)', clog_content, flags=re.MULTILINE)
-        sections = [s.strip() for s in sections if s.strip()][:10]
-        lines_out = []
-        for sec in sections:
-            sec_lines = sec.splitlines()
-            title_m = re.match(r'^# \[(.+?)\]\s*-\s*(\S+)', sec_lines[0])
-            if title_m:
-                lines_out.append(f"    Version {title_m.group(1)} ({title_m.group(2)})")
-            for l in sec_lines[1:]:
-                l = l.strip()
-                if not l:
-                    continue
-                if l.startswith('###'):
-                    pass  # on ignore les sous-titres
-                elif l.startswith('-'):
-                    lines_out.append(f"    {l}")
-        changelog_val = '\n'.join(lines_out)
-        # Nettoyer le markdown et les caractères non-ASCII courants
-        changelog_val = re.sub(r'\*\*(.+?)\*\*', r'\1', changelog_val)  # **bold**
-        changelog_val = re.sub(r'\*(.+?)\*', r'\1', changelog_val)       # *italic*
-        changelog_val = re.sub(r'`(.+?)`', r'\1', changelog_val)         # `code`
-        changelog_val = (changelog_val
-            .replace('\u2192', '->')
-            .replace('\u2190', '<-')
-            .replace('\u2026', '...')
-            .replace('\u2019', "'").replace('\u2018', "'")
-            .replace('\u201c', '"').replace('\u201d', '"')
-            .replace('\u00ae', '(R)').replace('\u00a9', '(c)')
-        )
-        # Remplacer le bloc changelog= (multilignes indentées)
-        _repl = f'changelog={changelog_val}\n'
-        meta = re.sub(
-            r'^changelog=.*?(?=^\S|\Z)',
-            lambda m: _repl,
-            meta,
-            flags=re.MULTILINE | re.DOTALL
-        )
+    sections = re.split(r'(?=^# \[)', clog_content, flags=re.MULTILINE)
+    sections = [s.strip() for s in sections if s.strip()][:10]
+    lines_out = []
+    for sec in sections:
+        sec_lines = sec.splitlines()
+        title_m = re.match(r'^# \[(.+?)\]\s*-\s*(\S+)', sec_lines[0])
+        if title_m:
+            lines_out.append(f"    Version {title_m.group(1)} ({title_m.group(2)})")
+        for l in sec_lines[1:]:
+            l = l.strip()
+            if not l:
+                continue
+            if l.startswith('###'):
+                pass  # on ignore les sous-titres
+            elif l.startswith('-'):
+                lines_out.append(f"    {l}")
+    changelog_val = '\n'.join(lines_out)
+    # Nettoyer le markdown et les caractères non-ASCII courants
+    changelog_val = re.sub(r'\*\*(.+?)\*\*', r'\1', changelog_val)  # **bold**
+    changelog_val = re.sub(r'\*(.+?)\*', r'\1', changelog_val)       # *italic*
+    changelog_val = re.sub(r'`(.+?)`', r'\1', changelog_val)         # `code`
+    changelog_val = (changelog_val
+        .replace('\u2192', '->')
+        .replace('\u2190', '<-')
+        .replace('\u2026', '...')
+        .replace('\u2019', "'").replace('\u2018', "'")
+        .replace('\u201c', '"').replace('\u201d', '"')
+        .replace('\u00ae', '(R)').replace('\u00a9', '(c)')
+    )
+    # Remplacer le bloc changelog= (multilignes indentées)
+    _repl = f'changelog={changelog_val}\n'
+    meta = re.sub(
+        r'^changelog=.*?(?=^\S|\Z)',
+        lambda m: _repl,
+        meta,
+        flags=re.MULTILINE | re.DOTALL
+    )
 
     mpath.write_text(meta, encoding='utf-8')
 
