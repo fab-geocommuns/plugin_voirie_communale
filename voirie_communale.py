@@ -199,8 +199,8 @@ class VoirieCommunale(LayerOrderMixin, WfsLoaderMixin, StylesMixin, CacheManager
             "(voies communales et chemins ruraux).<br><br>"
             "<b>Auteur :</b> Yann Schwarz &lt;yann.schwarz@gmail.com&gt;<br>"
             "<b>Licence :</b> GNU GPL v2+<br>"
-            "<b>Source :</b> <a href='https://github.com/Cliath/voirie_communale'>"
-            "github.com/Cliath/voirie_communale</a>"
+            "<b>Source :</b> <a href='https://github.com/fab-geocommuns/plugin_voirie_communale'>"
+            "github.com/fab-geocommuns/plugin_voirie_communale</a>"
         )
         msg.setTextFormat(1)  # Qt::RichText
         msg.exec_()

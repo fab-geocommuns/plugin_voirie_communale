@@ -11,8 +11,8 @@ about=Ce plugin aide au recensement de la voirie communale dans QGIS.
     Il permet de charger et croiser les données cadastrales, BAN, voirie DGCL
     et routes OSM pour tenter d'identifier et d'analyser les voies communales et chemins ruraux.
 
-tracker=https://github.com/Cliath/voirie_communale/issues
-repository=https://github.com/Cliath/voirie_communale
+tracker=https://github.com/fab-geocommuns/plugin_voirie_communale/issues
+repository=https://github.com/fab-geocommuns/plugin_voirie_communale
 # End of mandatory metadata
 
 # Recommended items:

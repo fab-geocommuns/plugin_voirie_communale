@@ -3,11 +3,11 @@
 Ce dossier contient les fichiers ZIP générés localement par `build.bat`.
 
 > **Les ZIPs sont ignorés par git** (voir `.gitignore`).  
-> Pour télécharger une version, rendez-vous sur les **[GitHub Releases](https://github.com/Cliath/voirie_communale/releases)**.
+> Pour télécharger une version, rendez-vous sur les **[GitHub Releases](https://github.com/fab-geocommuns/plugin_voirie_communale/releases)**.
 
 ## Installer une version
 
-1. Téléchargez le ZIP depuis [GitHub Releases](https://github.com/Cliath/voirie_communale/releases)
+1. Téléchargez le ZIP depuis [GitHub Releases](https://github.com/fab-geocommuns/plugin_voirie_communale/releases)
 2. QGIS → **Extensions** → **Installer/Gérer les extensions** → onglet **Installer depuis un ZIP**
 3. Sélectionnez le fichier téléchargé et cliquez sur **Installer l’extension**
 
