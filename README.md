@@ -7,7 +7,7 @@ Version actuelle : **0.20.4** — voir [CHANGELOG](CHANGELOG.md)
 
 ### Depuis un ZIP
 
-1. Récupérez le ZIP depuis le dépôt ou via `build.bat` (dossier `releases/`)
+1. Téléchargez `voirie_communale-X.X.X.zip` depuis les [Releases GitHub](https://github.com/fab-geocommuns/plugin_voirie_communale/releases) (pas le bouton « Code → Download ZIP »)
 2. QGIS → **Extensions** → **Installer/Gérer les extensions** → onglet **Installer depuis un ZIP**
 3. Sélectionnez le fichier `voirie_communale-X.X.X.zip` et cliquez sur **Installer l'extension**
 4. Activez le plugin dans l'onglet **Installées**
